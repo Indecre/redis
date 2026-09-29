@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build clang
+      - name: Select compiler
+        run: |
+          if [ "${{ matrix.compiler }}" = clang ]; then
+            echo "CXX=clang++" >> "$GITHUB_ENV"
+          else
+            echo "CXX=g++" >> "$GITHUB_ENV"
+          fi
+      - name: Configure
+        run: cmake --preset debug -DCMAKE_CXX_COMPILER="$CXX"
+      - name: Build
+        run: cmake --build --preset debug -j2
+      - name: Test
+        run: ctest --preset debug --output-on-failure
+
+  sanitizers:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Configure
+        run: cmake --preset asan-ubsan
+      - name: Build
+        run: cmake --build --preset asan-ubsan -j2
+      - name: Test under ASan and UBSan
+        run: ctest --preset asan-ubsan --output-on-failure
+
+  fuzz-smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build clang
+      - name: Configure and build fuzzer
+        run: cmake --preset fuzz && cmake --build --preset fuzz -j2
+      - name: Fuzz parser for five seconds
+        run: ./build/fuzz/keyforge-resp-fuzz -max_total_time=5 -timeout=2
+

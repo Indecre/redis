@@ -1,0 +1,11 @@
+Checks: >
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  performance-*,
+  portability-*,
+  modernize-use-override,
+  modernize-use-nullptr
+WarningsAsErrors: ''
+HeaderFilterRegex: '^(include|src|apps|tests)/'
+
